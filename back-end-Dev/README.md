@@ -96,8 +96,8 @@ LOG_LEVEL=debug
 
 ## 👥 Equipo
 
-- [Nombre 1] - Rol/Responsabilidad
-- [Nombre 2] - Rol/Responsabilidad
+- [Gonzalo y Juanma] - Front-End
+- [Tomas y Vladimir] - Back-End
 
 ## 📝 Licencia
 
