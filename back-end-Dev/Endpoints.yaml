@@ -1,0 +1,1526 @@
+openapi: 3.0.3
+info:
+  title: Endpoints
+  description: Endpoints
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:5000'
+    description: As testing is done locally, try use this endpoints with a backend running on localhost.
+  - url: 'http://ec2-44-202-133-115.compute-1.amazonaws.com:5000'
+    description: Official production server. Trying endpoints SHOULD NOT be done in this server.
+components:
+  requestBodies:
+    PartReqBody:
+      description: Request body to use when creating or updating a part.
+      content:
+        application/json:
+          schema:
+            properties:
+              id:
+                type: number
+              brand:
+                type: string
+              name:
+                type: string
+              maker:
+                type: string
+              compatible_vehicles:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+              dimensions:
+                type: string
+              weight:
+                type: number
+              material:
+                type: string
+              price:
+                type: number
+              unit_cost:
+                type: number
+              qty:
+                type: integer
+  schemas:
+    Vehicle:
+      properties:
+        brand:
+          type: string
+        model:
+          type: string
+        production_year:
+          type: number
+        car_body:
+          type: string
+          enum:
+            - SUV
+            - Convertible
+            - Hatchback
+            - Camioneta
+            - Sedan
+            - Deportivo
+        fuel:
+          type: string
+          enum:
+            - Gasolina
+            - Diesel
+            - Electricidad
+        price:
+          type: number
+        description:
+          type: string
+      required:
+        - brand
+        - model
+        - production_year
+        - car_body
+        - fuel
+        - price
+    Part:
+      properties:
+        id:
+          type: number
+        brand:
+          type: string
+        name:
+          type: string
+        maker:
+          type: string
+        compatible_vehicles:
+          type: array
+          items:
+            properties:
+              vehicle:
+                type: string
+        dimensions:
+          type: string
+        weight:
+          type: number
+        material:
+          type: string
+        price:
+          type: number
+        cost:
+          type: number
+        stock:
+          type: number
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    201:
+      description: Created
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              id:
+                type: number
+    400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          example:
+            error: 'Missing or invalid data in request body.'
+    409:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          example:
+            error: 'Conflict with existing and new data.'
+    500:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          example:
+            error: 'The server encountered an unexpected error and could not process the request.'
+paths:
+  /login:
+    post:
+      summary: Login
+      description: Logs the user into the application, and returns a JWT which enables the user to call other endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+            example:
+              username: 'test_user'
+              password: '1234'
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: string
+                properties:
+                  jwt:
+                    type: string
+  /register:
+    post:
+      summary: User registration
+      description: Creates a user in the system
+      deprecated: true
+      responses:
+        405:
+          description: 'Method not allowed'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'No longer in use'
+  /logout:
+    post:
+      summary: Logout
+      description: Logs out the user from the application, and blacklists the JWT from further use.
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                logout:
+                  value:
+                    message: 'Logged out successfully'
+                already-logged-out:
+                  value:
+                    message: 'Already logged out'
+  /branches:
+    post:
+      summary: Branch Creation
+      description: Creates a new branch in the system. Can only be used by the super user.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                address:
+                  type: string
+            example:
+              name: 'Central Branch'
+              email: 'centralbranch@gmail.com'
+              address: 'Test St. 1234'
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/201'
+              example:
+                message: 'Branch created successfully'
+                id: 4
+        400:
+          $ref: '#/components/responses/400'
+    get:
+      summary: All Branches Retrieval
+      description: Lists all existing branches in the system. Can be used by all types of user.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: resultsperpage
+          schema:
+            type: number
+          required: true
+      responses:
+        200:
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  branches:
+                    type: array
+                    items:
+                      properties:
+                        id:
+                          type: number
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        address:
+                          type: string
+        500:
+          $ref: '#/components/responses/500'
+  /branches/{branchId}:
+    get:
+      summary: Single Branch Retrieval
+      description: Retrieves a single existing branch in the system. Can be used by all users.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: branchId
+          allowEmptyValue: false
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  address:
+                    type: string
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    put:
+      summary: Branch Updating
+      description: Updates an existing branch in the system. Can only be used by the super user.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: branchId
+          allowEmptyValue: false
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                contact:
+                  type: string
+            example:
+              name: 'Central Branch'
+              email: 'central_branch@gmail.com'
+              contact: '2691 4567'
+      responses:
+        200:
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Branch updated successfully'
+        404:
+          description: 'Not Found'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Branch not found'
+        400:
+          $ref: '#/components/responses/400'
+        409:
+          $ref: '#/components/responses/409'
+    delete:
+      summary: Branch Deletion
+      description: Soft-deletes an existing branch in the system. Can only be used by the super user.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: path
+          name: branchId
+          allowEmptyValue: false
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Branch has been deleted'
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: 'Not Found'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Branch not found'
+  /employees/{employeeId}:
+    post:
+      summary: Employee Creation
+      description: Creates a new employee in the system. Can be used by branch managers and the super user.
+      parameters:
+        - in: path
+          name: employeeId
+          description: The ID of the employee to be created.
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: string
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                address:
+                  type: string
+                contact:
+                  type: string
+                position:
+                  type: string
+                  enum:
+                    - 'owner'
+                    - 'seller'
+                    - 'admin'
+                    - 'accounting'
+                branch:
+                  type: number
+                hire_date:
+                  type: number
+              required:
+                - name
+                - surname
+                - email
+                - address
+                - contact
+                - position
+                - branch
+                - hire_date
+            example:
+              name: 'Testname'
+              surname: 'Employee'
+              address: 'Test St. 123'
+              email: 'test.email@gmail.com'
+              contact: '093123123'
+              position: 'seller'
+              branch: '1'
+              hire_date: '2024-05-02'
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/201'
+              example:
+                message: 'Employee created successfully'
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+    put:
+      summary: Employee update
+      description: Changes one or more properties (except the active and hire_date properties) of a single employee registered in the system.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: employeeId
+          description: The ID of the employee that is going to be updated
+          schema:
+            type: string
+          required: true
+          allowEmptyValue: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address:
+                  type: string
+                branch:
+                  type: number
+                contact:
+                  type: string
+                email:
+                  type: string
+                position:
+                  type: string
+            example:
+              address: 'Test St. 123'
+              contact: '093123123'
+              position: 'Manager'
+              branch: 2
+      responses:
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Employee not found'
+        400:
+          $ref: '#/components/responses/400'
+        409:
+          $ref: '#/components/responses/409'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Employee updated successfully'
+        500:
+          $ref: '#/components/responses/500'
+    patch:
+      summary: Password Update
+      description: Changes ONLY the password of the provided employee.
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password:
+                  type: string
+                old_password:
+                  type: string
+              required:
+                - new_password
+                - old_password
+            example:
+              old_password: "old_password4321"
+              new_password: "new_password1234"
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Password has been updated'
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: "Employee not found"
+    delete:
+      summary: Employee Deletion
+      description: Soft-deletes an employee from the system. Can only be used by branch managers or the super user.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: path
+          name: employeeId
+          description: The ID of the employee that is going to be deleted
+          schema:
+            type: string
+          required: true
+          allowEmptyValue: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Employee deleted successfully'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Employee not found'
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+  /clients/ids:
+    get:
+      summary: Client ID's
+      description: Returns a list of all clients registered in the system, which will be passed to a dropdown when a sale is being registered.
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientIds:
+                    type: array
+                    items:
+                      properties:
+                        id:
+                          type: string
+              example:
+                clientIds: [
+                  '21354689',
+                  '23215467'
+                ]
+        500:
+          $ref: '#/components/responses/500'
+  /sales:
+    get:
+      summary: List Sales
+      description: Returns a list of all the sales registered in the system. Each element of this list includes complete details about the sale, such as the client, the sold article, the quantity, sale price, branch, seller and sale date. Can only be used by upper management.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: branch
+          description: The branch id, to query sales from a specific branch. Querying with the void string gives sales from all branches.
+          schema:
+            type: integer
+          allowEmptyValue: true
+          required: true
+        - in: query
+          name: startdate
+          description: Filters the sales from this date on, until the date specified in enddate.
+          schema:
+            type: string
+          allowEmptyValue: true
+          required: true
+        - in: query
+          name: enddate
+          description: Filters the sales up until this date, from the date specified in startdate.
+          schema:
+            type: string
+          allowEmptyValue: true
+          required: true
+        - in: query
+          name: product
+          description: The product id, to query sales from a specific product. Querying with the void string will give sales from all products.
+          schema:
+            type: number
+          allowEmptyValue: true
+          required: true
+        - in: query
+          name: paymentmode
+          description: Filters the sales by the given payment mode.
+          schema:
+            type: string
+            enum:
+              - CREDITO
+              - DEBITO
+              - EFECTIVO
+              - CHEQUE
+          allowEmptyValue: true
+          required: true
+        - in: query
+          name: page
+          description: The page number to be retrieved.
+          schema:
+            type: integer
+          allowEmptyValue: false
+          required: true
+        - in: query
+          name: resultsperpage
+          description: The page size
+          schema:
+            type: integer
+          allowEmptyValue: false
+          required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sales:
+                    type: array
+                    items:
+                      properties:
+                        employee:
+                          type: string
+                        product:
+                          type: integer
+                        branch:
+                          type: integer
+                        qty:
+                          type: integer
+                        client:
+                          type: string
+                        client_acc:
+                          type: string
+                        payment_mode:
+                          type: string
+                        date:
+                          type: string
+                        receipt:
+                          type: integer
+                        unit_cost:
+                          type: number
+              example:
+                sales:
+                  [
+                    {
+                      receipt: 1,
+                      client: 23456789,
+                      client_acc: 456789,
+                      product: 1,
+                      quantity: 1,
+                      unit_cost: 20000,
+                      branch: 1,
+                      employee: 12345678,
+                      payment_mode: "CHEQUE",
+                      date: "2023-04-27 15:06:37"
+                    },
+                    {
+                      receipt: 1,
+                      client: 23456789,
+                      client_acc: 456789,
+                      product: 2,
+                      quantity: 2,
+                      unit_cost: 150,
+                      branch: 1,
+                      employee: 12345678,
+                      payment_mode: "DEBITO",
+                      saleDate: "2023-04-26 12:56:40"
+                    }
+                  ]
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+    post:
+      summary: Sale Creation
+      description: Registers a new sale in the system. Users may register vehicles or spare parts, and must provide the article ID, client ID and quantity.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                articleId:
+                  type: number
+                clientId:
+                  type: string
+                saleDate:
+                  type: string
+                qty:
+                  type: number
+                payment:
+                  type: string
+                  enum:
+                    - CREDITO
+                    - DEBITO
+                    - EFECTIVO
+                    - CHEQUE
+                receipt:
+                  type: number
+              required:
+                - articleId
+                - clientId
+                - qty
+                - payment
+                - receipt
+            example:
+              vehicle:
+                values:
+                  articleId: 123
+                  clientId: '11111111'
+                  qty: 1
+                  payment: 'EFECTIVO'
+                  receipt: 2
+              sparePart:
+                values:
+                  articleId: 124
+                  clientId: '11111111'
+                  qty: 100
+                  payment: 'CREDITO'
+                  receipt: 2
+      responses:
+        201:
+          description: Created. Returns the registered sale ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/201'
+              example:
+                message: 'Sale created successfully'
+                id: 10
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+  /sales/{receipt}:
+    get:
+      summary: Single Sale Retrieval
+      description: Retrieves a single sale from the system. Can be used by all users.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: receipt
+          description: The sale receipt which is to be retrieved
+          schema:
+            type: number
+          required: true
+          allowEmptyValue: false
+        - in: query
+          name: branch
+          description: The branch id. Represents the branch in which the sale took place.
+          schema:
+            type: integer
+          required: true
+          allowEmptyValue: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sale:
+                    type: object
+                    properties:
+                      employee:
+                        type: string
+                      product:
+                        type: integer
+                      branch:
+                        type: integer
+                      qty:
+                        type: integer
+                      client:
+                        type: string
+                      client_acc:
+                        type: string
+                      payment_mode:
+                        type: string
+                      date:
+                        type: string
+                      receipt:
+                        type: integer
+                      unit_cost:
+                        type: number
+              example:
+                receipt: 1
+                client: 23456789
+                client_acc: 456789
+                product: 2
+                quantity: 2
+                unit_cost: 150
+                branch: 1
+                employee: 12345678
+                payment_mode: "DEBITO"
+                saleDate: "2023-04-26 12:56:40"
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Sale not found.'
+        500:
+          $ref: '#/components/responses/500'
+    put:
+      summary: Edit Sale
+      description: 'Updates details of an existing sale. Depending of the sold article type, editable fields may vary. For vehicles, editable fields are the: article, client and sell date. For spare parts, the editable fields are the same and the quantity.'
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: Sale ID
+          description: The sale id which is to be retrieved
+          schema:
+            type: number
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                articleId:
+                  type: number
+                clientId:
+                  type: string
+                saleDate:
+                  type: string
+                qty:
+                  type: number
+                  description: Only required if isVehicle is false
+                isVehicle:
+                  type: boolean
+                  description: true if vehicle, false if spare parts
+            example:
+              articleId: 123
+              clientId: '11111111'
+              saleDate: '2023-05-01 11:27:35'
+              qty: 2
+              isVehicle: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: number
+              example:
+                message: 'Sale modified successfully'
+                id: 10
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Sale not found.'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+  /vehicles:
+    get:
+      summary: Vehicles Retrieval
+      description: Returns a list of all vehicles registered in the system. Each element in the list includes complete detail about each vehicle, such as the brand, model, production year as YYYY, car body, fuel type, price and description.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: number
+        - in: query
+          name: resultsperpage
+          schema:
+            type: number
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page:
+                    type: number
+                  vehicles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vehicle'
+              example:
+                page: 1
+                vehicles: [
+                  {
+                    id: 1,
+                    brand: "Toyota",
+                    model: "Corolla",
+                    year: 2020,
+                    car_body: "Sedan",
+                    fuel: "Gasoline",
+                    price: 20000,
+                    description: " A reliable sedan for everyday use."
+                  },
+                  {
+                    id: 2,
+                    brand: "Ford",
+                    model: "F-150",
+                    production_year: 2019,
+                    car_body: “Pickup Truck”,
+                    fuel: "Diesel",
+                    price: 35000,
+                    description: "Powerful truck for hauling and towing"
+                  }
+                ]
+        500:
+          $ref: '#/components/responses/500'
+    post:
+      summary: Register New Vehicle
+      description: Creates a new vehicle in the system. User must provide the brand, model, production year (yyyy), car body, fuel type, price and description.
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brand:
+                  type: string
+                model:
+                  type: string
+                year:
+                  type: number
+                car_body:
+                  type: string
+                  enum:
+                    - SUV
+                    - Convertible
+                    - Hatchback
+                    - Camioneta
+                    - Sedan
+                    - Deportivo
+                fuel:
+                  type: string
+                  enum:
+                    - Gasolina
+                    - Diesel
+                    - Electricidad
+                price:
+                  type: number
+                description:
+                  type: string
+                qty:
+                  type: integer
+                unit_cost:
+                  type: number
+              required:
+                - brand
+                - model
+                - year
+                - car_body
+                - fuel
+                - price
+                - qty
+                - unit_cost
+            example:
+              brand: "Chevrolet"
+              model: "Camaro"
+              year: 2021
+              car_body: "Deportivo"
+              fuel: "Gasolina"
+              price: 40000
+              qty: 10
+              unit_cost: 25000
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/201'
+              example:
+                message: 'Vehicle created successfully'
+                id: 3
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+  /vehicles/{vehicleId}:
+    put:
+      summary: Modify Vehicle
+      description: "Updates the details of an exisiting vehicle. Editable fields are: production year, car body, fuel type and price."
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: path
+          name: vehicleId
+          allowEmptyValue: false
+          required: true
+          schema:
+            type: number
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                year:
+                  type: integer
+                car_body:
+                  type: string
+                  enum:
+                    - Deportivo
+                    - SUV
+                    - Convertible
+                    - Hatchback
+                    - Camioneta
+                    - Sedan
+                fuel:
+                  type: string
+                  enum:
+                    - Diesel
+                    - Gasolina
+                    - Electricidad
+                price:
+                  type: number
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: number
+              example:
+                message: "Vehicle modified successfully"
+                id: 3
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                error: 'Vehicle not found.'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+  /parts:
+    get:
+      summary: Parts Retrieval
+      description: Returns a list of all parts registered in the system. Each element in the list includes complete detail about each part type, such as name, maker, brand, compatible vehicles, dimensions, weight (in grams), material, selling and purchase price and quantity in stock.
+      security:
+        - BearerAuth: []
+      responses:
+        500:
+          $ref: '#/components/responses/500'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Part'
+              example: [
+                {
+                  id: 1,
+                  name: "Filtro de aire",
+                  maker: "Bosch",
+                  brand: “PremiumAir”,
+                  compatibles_vehicles: ["Toyota Corolla (2015-2020)", "Honda Civic (2016-2021)"],
+                  dimensions: "10 cm x 20 cm x 5 cm",
+                  weight: 200,
+                  material:  "Papel filtrante",
+                  price: 15.99,
+                  cost: 10.00,
+                  stock: 50
+                },
+                {
+                  id: 2,
+                  name: "Batería",
+                  maker: "ACDelco",
+                  brand: “PowerStart”,
+                  compatibles_vehicles: ["Toyota Corolla (2015-2020)", "Honda Civic (2016-2021)"],
+                  dimensions: "15 cm x 10 cm x 8 cm",
+                  weight: 2500,
+                  material:  "Plomo-ácido",
+                  price: 99.99,
+                  cost: 80.00,
+                  stock: 30
+               }
+              ]
+    post:
+      summary: Create Part
+      description: Creates a new part in the system. User must provide the name, maker, compatible vehicles, dimensions, weight (in grams), material, selling and purchasing cost.
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/requestBodies/PartReqBody'
+            example:
+              name: "Pastillas de freno"
+              maker: "Brembo"
+              brand: "BrakeMax"
+              compatibles_vehicles: [
+                {
+                  brand: "Chevrolet",
+                  model: "Camaro",
+                  production_year: 2021,
+                  car_body: "Sports Car",
+                  fuel: "Gasoline",
+                  price: 40000,
+                  description: "Iconic American muscle car"
+                }
+              ]
+              dimensions: "8 cm x 5 cm x 3 cm"
+              weight: 300
+              material: "Compuesto cerámico"
+              price: 49.99
+              unit_cost: 35.00
+              qty: 100
+      responses:
+        201:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/201'
+              example:
+                message: Part created successfully
+                id: 3
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+  /parts/{partId}:
+    put:
+      summary: Modify Part
+      description: 'Updates the details of an existing part. Editable fields are: name, maker, brand, compatible vehicles, dimensions, weight (in grams), material, selling and purchasing price.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: path
+          name: partId
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                maker:
+                  type: string
+                brand:
+                  type: string
+                compatible_vehicles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Vehicle'
+                dimensions:
+                  type: number
+                weight:
+                  type: number
+                material:
+                  type: string
+                price:
+                  type: number
+                cost:
+                  type: number
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+              example:
+                message: "Part updated successfully"
+                id: 2
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              example:
+                message: "Part not found"
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+  /product/{productId}:
+    delete:
+      summary: Product deletion
+      description: Marks an existing product as inactive.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          description: The ID of the product to be deleted
+          name: productId
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                already_deleted:
+                  value:
+                    message: 'Product already deleted'
+                deleted:
+                  value:
+                    message: 'Product deleted successfully'
+        400:
+          $ref: '#/components/responses/400'
+        500:
+          $ref: '#/components/responses/500'
+  /dashboard:
+    get:
+      summary: Main dashboard information
+      description: Returns all the information (last month sales, last year sales, avg. value per sale, most sold product and data points for graphics) to build the landing page.
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bestSeller:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      percentage:
+                        type: number
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        value:
+                          type: number
+                        variation:
+                          type: number
+                  graphicData:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: string
+                        value:
+                          type: number
+              example:
+                cards: [
+                  {
+                    title: 'Ventas del último mes',
+                    value: 327450,
+                    variation: 0.1672
+                  },
+                  {
+                    title: 'Ventas del último año',
+                    value: 865746,
+                    variation: 0.0357
+                  },
+                  {
+                    title: 'Valor promedio de ventas',
+                    value: 32501,
+                    variation: 0.2578
+                  }
+                ]
+                bestSeller:
+                  {
+                    name: 'Tesla Model Y',
+                    percentage: 0.25
+                  }
+                graphicData: [
+                  {
+                    month: 'May 2023',
+                    value: 3254861
+                  },
+                  {
+                    month: 'June 2023',
+                    value: 4579612
+                  },
+                  {
+                    month: 'July 2023',
+                    value: 3218642
+                  },
+                  {
+                    month: 'August 2023',
+                    value: 4589132
+                  },
+                  {
+                    month: 'September 2023',
+                    value: 3015684
+                  },
+                  {
+                    month: 'October 2023',
+                    value: 2931578
+                  },
+                  {
+                    month: 'November 2023',
+                    value: 2901654
+                  },
+                  {
+                    month: 'December 2023',
+                    value: 3304897
+                  },
+                  {
+                    month: 'January 2024',
+                    value: 3604598
+                  },
+                  {
+                    month: 'February 2024',
+                    value: 3704651
+                  },
+                  {
+                    month: 'March 2024',
+                    value: 3845456
+                  },
+                  {
+                    month: 'April 2024',
+                    value: 4032587
+                  }
+                ]
+        500:
+          $ref: '#/components/responses/500'
